@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#003366"/>
+      <stop offset="0.55" stop-color="#00284f"/>
+      <stop offset="1" stop-color="#001a33"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c5a059"/>
+      <stop offset="1" stop-color="#e3c987"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fond -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Motif architectural subtil (silhouettes d'immeubles) -->
+  <g opacity="0.06" fill="#ffffff">
+    <rect x="820" y="300" width="70" height="330"/>
+    <rect x="905" y="220" width="90" height="410"/>
+    <rect x="1010" y="360" width="60" height="270"/>
+    <rect x="1085" y="260" width="80" height="370"/>
+  </g>
+  <g opacity="0.10" fill="none" stroke="#c5a059" stroke-width="2">
+    <line x1="905" y1="260" x2="995" y2="260"/>
+    <line x1="905" y1="320" x2="995" y2="320"/>
+    <line x1="905" y1="380" x2="995" y2="380"/>
+    <line x1="905" y1="440" x2="995" y2="440"/>
+    <line x1="905" y1="500" x2="995" y2="500"/>
+  </g>
+
+  <!-- Liseré or supérieur -->
+  <rect x="0" y="0" width="1200" height="8" fill="url(#gold)"/>
+
+  <!-- Monogramme -->
+  <g transform="translate(110,120)">
+    <rect x="0" y="0" width="64" height="64" rx="12" fill="none" stroke="url(#gold)" stroke-width="3"/>
+    <text x="32" y="46" font-family="Georgia, 'Times New Roman', serif" font-size="38" font-weight="bold" fill="#c5a059" text-anchor="middle">TW</text>
+  </g>
+
+  <!-- Titre -->
+  <text x="110" y="320" font-family="Arial, Helvetica, sans-serif" font-size="96" font-weight="bold" fill="#ffffff" letter-spacing="-1">TenderWise</text>
+
+  <!-- Sous-titre or -->
+  <text x="113" y="376" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="bold" fill="#c5a059" letter-spacing="1">AMO · Facility Management · Réhabilitation</text>
+
+  <!-- Accroche -->
+  <text x="113" y="430" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#cdd9e6">Valorisez vos actifs immobiliers avec une vision durable.</text>
+
+  <!-- Divider -->
+  <rect x="113" y="470" width="90" height="4" rx="2" fill="url(#gold)"/>
+
+  <!-- Pied -->
+  <text x="113" y="525" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="bold" fill="#ffffff">www.tenderwise.fr</text>
+  <text x="113" y="558" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#8ba3bd">Expert indépendant · Lyon / Villeurbanne</text>
+</svg>

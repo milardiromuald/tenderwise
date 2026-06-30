@@ -1,0 +1,21 @@
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/duvu8164/tenderwise"
+PassengerBaseURI "/"
+PassengerNodejs "/home/duvu8164/nodevenv/tenderwise/20/bin/node"
+PassengerAppType node
+PassengerStartupFile server.cjs
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+# DO NOT REMOVE OR MODIFY. CLOUDLINUX ENV VARS CONFIGURATION BEGIN
+<IfModule Litespeed>
+</IfModule>
+# DO NOT REMOVE OR MODIFY. CLOUDLINUX ENV VARS CONFIGURATION END
+
+# Hote canonique unique : https://www.tenderwise.fr
+# Une seule redirection 301 qui force a la fois HTTPS et le www, et qui
+# rattrape l'apex (tenderwise.fr), l'ancien sous-domaine (app.tenderwise.fr)
+# et tout autre hote -> evite les divergences cookies/SEO et le contenu
+# de l'ancien outil servi sous app.tenderwise.fr.
+RewriteEngine On
+RewriteCond %{HTTPS} off [OR]
+RewriteCond %{HTTP_HOST} !^www\.tenderwise\.fr$ [NC]
+RewriteRule ^ https://www.tenderwise.fr%{REQUEST_URI} [R=301,L]

@@ -1,0 +1,39 @@
+# TenderWise — llms.txt
+# https://llmstxt.org
+
+## About
+
+TenderWise (raison sociale : TENDER WISE SAS) est un cabinet d'expertise indépendant spécialisé en Assistance à Maîtrise d'Ouvrage (AMO), facility management et gestion de patrimoine immobilier, basé à Villeurbanne (Lyon), France.
+
+> Note de marque : le nom commercial s'écrit TOUJOURS « TenderWise » en un seul mot. « TENDER WISE SAS » désigne uniquement la raison sociale juridique. TenderWise est un cabinet 100 % indépendant, sans aucun lien capitalistique avec des prestataires ou groupes tiers.
+
+## Services
+
+- **Études & Faisabilité** : programmation architecturale, estimations financières, audits techniques.
+- **Conduite d'Opération (AMO)** : pilotage de projet de A à Z, sélection des intervenants, suivi administratif, financier et chantier, réception des travaux.
+- **Facility Management & Exploitation** : pilotage de contrats de maintenance multitechniques, maintenance réglementaire, contrôles périodiques.
+- **Conseil Stratégique** : valorisation d'actifs, conformité Décret Tertiaire, audit énergétique, RSE.
+
+## Key Facts
+
+- Fondé par des experts issus des grands groupes d'ingénierie.
+- 20+ ans d'expérience cumulée en immobilier.
+- Indépendance totale : aucun lien capitalistique avec des prestataires.
+- SIREN : 983 761 214 | RCS Lyon
+
+## Contact
+
+- Adresse : 54 Avenue Général Leclerc, 69100 Villeurbanne, France
+- Web : https://www.tenderwise.fr
+- Email : contact@tenderwise.fr
+
+## Pages
+
+- Accueil : https://www.tenderwise.fr/
+- Expertise : https://www.tenderwise.fr/expertise
+- Qui sommes-nous : https://www.tenderwise.fr/qui-sommes-nous
+- Réalisations : https://www.tenderwise.fr/realisations
+- Blog / Actualités : https://www.tenderwise.fr/blog
+- Carrière : https://www.tenderwise.fr/carriere
+- Contact : https://www.tenderwise.fr/contact
+- Sitemap : https://www.tenderwise.fr/sitemap.xml

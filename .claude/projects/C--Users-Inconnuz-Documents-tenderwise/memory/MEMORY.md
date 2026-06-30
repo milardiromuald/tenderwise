@@ -1,0 +1,1 @@
+- [dev-no-local-db](dev-no-local-db.md) — pas de MySQL local : dev server 500, vérif navigateur impossible hors prod
