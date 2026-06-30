@@ -37,6 +37,28 @@ function logInfo(label, msg) {
   console.log(line.trim());
 }
 
+// ─── Validation des variables d'environnement obligatoires ────────────────────
+// Sans ce contrôle, une variable manquante (ex. clé de chiffrement oubliée lors
+// d'un déploiement) laissait l'app démarrer normalement puis échouer en silence
+// au premier usage (connexion OAuth, lecture d'un secret chiffré...).
+const REQUIRED_ENV_VARS = ['NEXTAUTH_SECRET', 'SETTINGS_ENCRYPTION_KEY', 'DB_HOST', 'DB_NAME', 'DB_USER'];
+
+function checkRequiredEnv() {
+  const missing = REQUIRED_ENV_VARS.filter((name) => !process.env[name]);
+  if (missing.length > 0) {
+    const msg = `Variables d'environnement obligatoires manquantes : ${missing.join(', ')}. ` +
+      `Vérifiez .env.local (ou la config de l'hébergeur) avant de redémarrer.`;
+    console.error(`\n[FATAL] ${msg}\n`);
+    try { appendFileSync(logFile, `[${new Date().toISOString()}] [FATAL] ${msg}\n`); } catch {}
+    process.exit(1);
+  }
+  if (!process.env.CRON_SECRET) {
+    console.warn('[WARN] CRON_SECRET non défini — le planificateur interne (publication programmée, idées quotidiennes) ne se déclenchera pas.');
+  }
+}
+
+checkRequiredEnv();
+
 const app = next({ dev: false, dir: __dirname });
 const handle = app.getRequestHandler();
 
