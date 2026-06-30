@@ -1,6 +1,7 @@
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { query, queryOne } from '@/lib/db';
+import { getSetting } from '@/lib/settings';
 import Link from 'next/link';
 
 interface RecentArticle {
@@ -70,6 +71,26 @@ export default async function AdminDashboard() {
     unreadMessages  = msgRow?.c ?? 0;
     newApplications = appRow?.c ?? 0;
   } catch { /* tables absentes */ }
+
+  /* ── Statut réel des connexions LinkedIn (perso + Page entreprise) ──────── */
+  let linkedinState: { connected: boolean; expired: boolean } = { connected: false, expired: false };
+  try {
+    const [pToken, pExpiresAt, oToken, oExpiresAt] = await Promise.all([
+      getSetting('linkedin_access_token', ''),
+      getSetting('linkedin_token_expires_at', ''),
+      getSetting('linkedin_org_access_token', ''),
+      getSetting('linkedin_org_token_expires_at', ''),
+    ]);
+    const pExpired = pExpiresAt ? new Date(pExpiresAt) < new Date() : false;
+    const oExpired = oExpiresAt ? new Date(oExpiresAt) < new Date() : false;
+    const pConnected = !!pToken && !pExpired;
+    const oConnected = !!oToken && !oExpired;
+    linkedinState = {
+      connected: pConnected || oConnected,
+      // "Expiré" seulement si une connexion existe mais qu'aucune n'est valide actuellement
+      expired: (!!pToken || !!oToken) && !pConnected && !oConnected,
+    };
+  } catch { /* settings indisponibles */ }
 
   const fmtDate = (s: string) => {
     if (!s) return '—';
@@ -355,11 +376,12 @@ export default async function AdminDashboard() {
               {
                 icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>,
                 label: 'LinkedIn',
-                status: 'Bientôt',
-                statusBg: '#dbeafe', statusColor: '#1d4ed8',
-                dot: '#d1d5db',
-                href: null,
-                disabled: true,
+                status: linkedinState.connected ? 'Connecté' : linkedinState.expired ? 'Jeton expiré' : 'Non connecté',
+                statusBg:    linkedinState.connected ? '#dcfce7' : linkedinState.expired ? '#fee2e2' : '#f3f4f6',
+                statusColor: linkedinState.connected ? '#16a34a' : linkedinState.expired ? '#dc2626' : '#6b7280',
+                dot: linkedinState.connected ? '#16a34a' : linkedinState.expired ? '#dc2626' : '#d1d5db',
+                href: linkedinState.connected ? '/admin/linkedin' : '/admin/connectors',
+                disabled: false,
               },
               {
                 icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>,
