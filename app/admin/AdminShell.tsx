@@ -5,6 +5,7 @@ import AdminSidebar from './AdminSidebar';
 import AdminSubSidebar from './AdminSubSidebar';
 import AdminNotifier from './AdminNotifier';
 import AdminTopBar from './AdminTopBar';
+import SessionExpiryWarning from './SessionExpiryWarning';
 
 export default function AdminShell({ children, role }: { children: React.ReactNode; role?: string }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -85,6 +86,7 @@ export default function AdminShell({ children, role }: { children: React.ReactNo
       </div>
 
       <AdminNotifier />
+      <SessionExpiryWarning />
     </>
   );
 }
