@@ -393,6 +393,7 @@ function LivePreview({ data }: { data: ArticleData }) {
 export default function ArticleForm({ initial, authorProfile }: { initial?: Partial<ArticleData>; authorProfile?: AuthorProfile }) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const draftKey = `tw_article_draft_${initial?.id || 'new'}`;
 
   const [data, setData] = useState<ArticleData>({
     titre: '', slug: '', extrait: '', contenu: '',
@@ -426,6 +427,45 @@ export default function ArticleForm({ initial, authorProfile }: { initial?: Part
       .then(({ categories: cats }) => setCategories(cats))
       .catch(() => {});
   }, []);
+
+  /* ── Auto-save local : protège contre une perte de contenu en cas
+     d'expiration de session ou de fermeture accidentelle de l'onglet. ── */
+  const dataRef = useRef(data);
+  useEffect(() => { dataRef.current = data; }, [data]);
+
+  // Détecte un brouillon local dès le rendu initial (initialiseur paresseux —
+  // jamais appliqué automatiquement, juste proposé via la bannière).
+  const [draftFound, setDraftFound] = useState<{ data: ArticleData; ts: number } | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { data: ArticleData; ts: number };
+      return parsed?.data && parsed.ts ? parsed : null;
+    } catch { return null; /* brouillon corrompu : ignoré */ }
+  });
+
+  // Sauvegarde périodique (30s) dans localStorage tant qu'il y a du contenu.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const d = dataRef.current;
+      if (!d.titre.trim() && !d.contenu.trim()) return;
+      try {
+        localStorage.setItem(draftKey, JSON.stringify({ data: d, ts: Date.now() }));
+      } catch { /* quota localStorage dépassé : ignoré */ }
+    }, 30000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const restoreDraft = () => {
+    if (draftFound) setData(draftFound.data);
+    setDraftFound(null);
+  };
+  const dismissDraft = () => {
+    try { localStorage.removeItem(draftKey); } catch { /* ignoré */ }
+    setDraftFound(null);
+  };
 
   const set = useCallback(<K extends keyof ArticleData>(k: K, v: ArticleData[K]) => {
     setData((p) => ({ ...p, [k]: v }));
@@ -499,6 +539,7 @@ export default function ArticleForm({ initial, authorProfile }: { initial?: Part
       }
       setSaving(false);
       setSaveSuccess(true);
+      try { localStorage.removeItem(draftKey); } catch { /* ignoré */ }
       // Navigation dure : bypasse tous les caches Next.js côté client
       // pour garantir que la nouvelle image est chargée depuis la DB.
       window.location.href = '/admin/articles';
@@ -551,6 +592,33 @@ export default function ArticleForm({ initial, authorProfile }: { initial?: Part
       `}</style>
 
       <div style={{ padding: '1.5rem 2rem' }}>
+
+        {/* ── Bannière de restauration de brouillon local ─────────────────── */}
+        {draftFound !== null && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+            background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '10px',
+            padding: '0.75rem 1.1rem', marginBottom: '1.25rem',
+          }}>
+            <span style={{ fontSize: '0.85rem', color: '#92400e', flex: 1, minWidth: '220px' }}>
+              Un brouillon non sauvegardé a été trouvé ({new Date(draftFound.ts).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}).
+            </span>
+            <button
+              type="button"
+              onClick={restoreDraft}
+              style={{ padding: '6px 14px', background: '#c5a059', color: 'white', border: 'none', borderRadius: '7px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+            >
+              Restaurer
+            </button>
+            <button
+              type="button"
+              onClick={dismissDraft}
+              style={{ padding: '6px 14px', background: 'white', color: '#92400e', border: '1px solid #fcd34d', borderRadius: '7px', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
+            >
+              Ignorer
+            </button>
+          </div>
+        )}
 
         {/* ── Header ───────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', gap: '1rem', flexWrap: 'wrap' }}>
