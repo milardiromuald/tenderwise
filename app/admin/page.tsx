@@ -92,6 +92,33 @@ export default async function AdminDashboard() {
     };
   } catch { /* settings indisponibles */ }
 
+  /* ── LinkedIn : posts publiés et engagement des 7 derniers jours ─────────── */
+  let linkedinWeek = { posts: 0, likes: 0, comments: 0 };
+  try {
+    const row = await queryOne<{ posts: number; likes: number; comments: number }>(
+      `SELECT COUNT(*) as posts, COALESCE(SUM(likes),0) as likes, COALESCE(SUM(comments),0) as comments
+       FROM linkedin_posts
+       WHERE status = 'published' AND created_at >= (NOW() - INTERVAL 7 DAY)`
+    );
+    if (row) linkedinWeek = { posts: row.posts ?? 0, likes: row.likes ?? 0, comments: row.comments ?? 0 };
+  } catch { /* table absente */ }
+
+  /* ── Consommation IA cumulée (compteurs settings, jamais affichés ailleurs) ── */
+  let aiUsage = { articlesCount: 0, tokensIn: 0, tokensOut: 0 };
+  try {
+    const [articlesCount, tokensIn, tokensOut] = await Promise.all([
+      getSetting('ai_articles_count', '0'),
+      getSetting('ai_tokens_in', '0'),
+      getSetting('ai_tokens_out', '0'),
+    ]);
+    aiUsage = {
+      articlesCount: parseInt(articlesCount, 10) || 0,
+      tokensIn: parseInt(tokensIn, 10) || 0,
+      tokensOut: parseInt(tokensOut, 10) || 0,
+    };
+  } catch { /* settings indisponibles */ }
+  const fmtTok = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(0)}K` : String(n);
+
   const fmtDate = (s: string) => {
     if (!s) return '—';
     try { return new Date(s).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }); }
@@ -382,6 +409,9 @@ export default async function AdminDashboard() {
                 dot: linkedinState.connected ? '#16a34a' : linkedinState.expired ? '#dc2626' : '#d1d5db',
                 href: linkedinState.connected ? '/admin/linkedin' : '/admin/connectors',
                 disabled: false,
+                sub: linkedinState.connected
+                  ? `${linkedinWeek.posts} post${linkedinWeek.posts !== 1 ? 's' : ''} · ${linkedinWeek.likes + linkedinWeek.comments} interaction${linkedinWeek.likes + linkedinWeek.comments !== 1 ? 's' : ''} (7j)`
+                  : undefined,
               },
               {
                 icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>,
@@ -391,13 +421,17 @@ export default async function AdminDashboard() {
                 dot: '#d1d5db',
                 href: null,
                 disabled: true,
+                sub: undefined,
               },
             ].map((ch) => {
               const inner = (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0.7rem 1.25rem', borderTop: '1px solid #f3f4f6' }}>
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: ch.dot, flexShrink: 0 }} />
                   <span style={{ color: '#374151', flexShrink: 0, opacity: ch.disabled ? 0.5 : 1 }}>{ch.icon}</span>
-                  <span style={{ fontSize: '0.82rem', color: ch.disabled ? '#9ca3af' : '#374151', flex: 1, fontWeight: 500 }}>{ch.label}</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: '0.82rem', color: ch.disabled ? '#9ca3af' : '#374151', fontWeight: 500 }}>{ch.label}</span>
+                    {ch.sub && <span style={{ display: 'block', fontSize: '0.68rem', color: '#9ca3af', marginTop: '1px' }}>{ch.sub}</span>}
+                  </span>
                   <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: '5px', background: ch.statusBg, color: ch.statusColor, whiteSpace: 'nowrap' }}>
                     {ch.status}
                   </span>
@@ -474,6 +508,30 @@ export default async function AdminDashboard() {
                     <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '2px', fontWeight: 500 }}>{s.label}</div>
                   </div>
                 </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Usage IA (cumulé) */}
+          <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '1rem 1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.72rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                Usage IA (cumulé)
+              </p>
+              <Link href="/admin/ai" style={{ fontSize: '0.73rem', color: '#004a99', fontWeight: 600, textDecoration: 'none' }}>
+                Détails →
+              </Link>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+              {[
+                { label: 'Articles générés', value: String(aiUsage.articlesCount), color: '#7c3aed', bg: '#f5f3ff' },
+                { label: 'Tokens entrée', value: fmtTok(aiUsage.tokensIn), color: '#0369a1', bg: '#eff6ff' },
+                { label: 'Tokens sortie', value: fmtTok(aiUsage.tokensOut), color: '#c2410c', bg: '#fff7ed' },
+              ].map((s) => (
+                <div key={s.label} style={{ background: s.bg, borderRadius: '8px', padding: '0.7rem 0.5rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 900, color: s.color, fontFamily: 'Montserrat, sans-serif', lineHeight: 1 }}>{s.value}</div>
+                  <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '2px', fontWeight: 500 }}>{s.label}</div>
+                </div>
               ))}
             </div>
           </div>
