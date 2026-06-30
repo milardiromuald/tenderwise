@@ -42,6 +42,9 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           port: 21
+          # o2switch impose le FTPS explicite (chiffrement TLS) sur le port 21,
+          # le FTP en clair (protocole par defaut de l'action) est refuse.
+          protocol: ftps
           # Racine de l'app Node configurée dans cPanel → Setup Node.js App.
           server-dir: ./tenderwise2/
           local-dir: ./
