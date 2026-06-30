@@ -147,7 +147,7 @@ FORMAT DE SORTIE TECHNIQUE — réponds UNIQUEMENT avec un objet JSON valide (re
                      'meta_keywords', 'temps_lecture', 'categorie', 'categories',
                      'image_title', 'image_subtitle'],
         },
-    });
+    }, 'redacteur');
 
     const finishReason = result.candidates?.[0]?.finishReason;
     if (finishReason && finishReason !== 'STOP') {

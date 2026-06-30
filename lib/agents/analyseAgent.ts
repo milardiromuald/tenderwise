@@ -71,7 +71,7 @@ Réponds UNIQUEMENT avec un objet JSON valide.`;
           required: ['registre', 'angle', 'points_cles', 'lois_a_citer', 'mots_cles_seo', 'public_cible',
                      'persona', 'situation', 'enjeux', 'idee_recue', 'besoin_reel'],
         },
-    });
+    }, 'analyste');
 
     const tIn  = result.usageMetadata?.promptTokenCount     ?? 0;
     const tOut = result.usageMetadata?.candidatesTokenCount ?? 0;

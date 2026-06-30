@@ -25,7 +25,7 @@ export async function GET() {
     }
   }
 
-  const [articlesCount, imagesCount, selectedModel, imageModel, lastGeneration, tokensInRaw, tokensOutRaw, maxOutputTokensRaw, keyTier, keyModelsRaw] = await Promise.all([
+  const [articlesCount, imagesCount, selectedModel, imageModel, lastGeneration, tokensInRaw, tokensOutRaw, maxOutputTokensRaw, keyTier, keyModelsRaw, lastModelUsed, lastModelStep, lastModelFallback, lastModelAt] = await Promise.all([
     getSetting('ai_articles_count', '0'),
     getSetting('ai_images_count', '0'),
     getSetting('ai_article_model', 'gemini-3.1-flash-lite'),
@@ -36,6 +36,10 @@ export async function GET() {
     getSetting('ai_max_output_tokens', '32768'),
     getSetting('ai_key_tier', 'unknown'),
     getSetting('ai_key_models', '[]'),
+    getSetting('ai_last_model_used', ''),
+    getSetting('ai_last_model_step', ''),
+    getSetting('ai_last_model_fallback', '0'),
+    getSetting('ai_last_model_at', ''),
   ]);
 
   let keyModels: string[] = [];
@@ -54,6 +58,10 @@ export async function GET() {
     maxOutputTokens: parseInt(maxOutputTokensRaw, 10) || 32768,
     keyTier: hasKey ? keyTier : 'unknown',
     keyModels,
+    lastModelUsed,
+    lastModelStep,
+    lastModelFallback: lastModelFallback === '1',
+    lastModelAt,
   });
 }
 

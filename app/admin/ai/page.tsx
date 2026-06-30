@@ -17,6 +17,12 @@ interface Config {
   maxOutputTokens: number;
   keyTier: 'free' | 'paid' | 'unknown';
   keyModels: string[];
+  // ── Modèle réellement utilisé lors de la dernière génération (peut différer
+  //    du modèle préféré ci-dessus si un repli automatique a eu lieu)
+  lastModelUsed: string;
+  lastModelStep: string;
+  lastModelFallback: boolean;
+  lastModelAt: string;
 }
 interface TestResult {
   success?: boolean;
@@ -542,6 +548,23 @@ export default function AIConfigPage() {
           ))}
         </div>
       </div>
+
+      {/* ── Section 2ter : Modèle réellement utilisé à la dernière génération ── */}
+      {config?.lastModelUsed && (
+        <div style={{
+          marginBottom: '1.75rem', borderRadius: '10px', padding: '0.9rem 1.1rem',
+          display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+          background: config.lastModelFallback ? '#fffbeb' : '#f0fdf4',
+          border: `1px solid ${config.lastModelFallback ? '#fde68a' : '#a7f3d0'}`,
+        }}>
+          <span style={{ fontSize: '0.78rem', color: config.lastModelFallback ? '#92400e' : '#065f46' }}>
+            {config.lastModelFallback ? '⚠ Repli automatique actif' : '✓ Modèle préféré actif'} — dernière génération
+            {config.lastModelStep ? ` (${config.lastModelStep})` : ''} via <strong>{config.lastModelUsed}</strong>
+            {config.lastModelFallback ? ` (au lieu de ${selectedModel} — quota dépassé ou modèle indisponible)` : ''}
+            {config.lastModelAt ? ` · ${new Date(config.lastModelAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}
+          </span>
+        </div>
+      )}
 
       {/* ── Section 3 : Modèles (compact, 2 colonnes) ── */}
       <div style={{ marginBottom:'1.75rem' }}>

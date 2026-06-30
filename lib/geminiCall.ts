@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { setSetting } from './settings';
 
 /**
  * Modèles gratuits Gemini, par ordre de préférence décroissante.
@@ -36,6 +37,10 @@ function isModelUnavailableError(err: unknown): boolean {
  * Le modèle principal (depuis les réglages) est essayé en premier ; s'il est en
  * quota épuisé (429) OU invalide/indisponible (404), on tente les suivants dans
  * FREE_MODEL_CHAIN. Toute autre erreur est remontée immédiatement.
+ *
+ * `trackingStep` (optionnel) : si fourni, le modèle qui a effectivement répondu
+ * est enregistré dans les settings (best-effort) pour que /admin/ai affiche le
+ * modèle réellement utilisé — la bascule de repli était jusqu'ici invisible.
  */
 export async function callGemini(
   ai: GoogleGenAI,
@@ -43,6 +48,7 @@ export async function callGemini(
   contents: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   config: Record<string, any>,
+  trackingStep?: string,
 ) {
   // Chaîne : modèle principal d'abord, puis fallbacks (sans doublon)
   const chain = [primaryModel, ...FREE_MODEL_CHAIN.filter(m => m !== primaryModel)];
@@ -50,7 +56,16 @@ export async function callGemini(
   let lastErr: unknown;
   for (const model of chain) {
     try {
-      return await ai.models.generateContent({ model, contents, config });
+      const result = await ai.models.generateContent({ model, contents, config });
+      if (trackingStep) {
+        Promise.all([
+          setSetting('ai_last_model_used',     model),
+          setSetting('ai_last_model_step',     trackingStep),
+          setSetting('ai_last_model_fallback', model !== primaryModel ? '1' : '0'),
+          setSetting('ai_last_model_at',       new Date().toISOString()),
+        ]).catch(() => {});
+      }
+      return result;
     } catch (err) {
       if (isQuotaError(err) || isModelUnavailableError(err)) {
         lastErr = err;

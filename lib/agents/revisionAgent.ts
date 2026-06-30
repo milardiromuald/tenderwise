@@ -165,7 +165,7 @@ Réponds UNIQUEMENT avec un objet JSON valide.`;
           required: ['promptRespect', 'misEnForme', 'coherence', 'liens', 'seo', 'completude',
                      'feedback', 'corrections', 'article_corrige'],
         },
-    });
+    }, 'reviseur');
 
     const tIn  = result.usageMetadata?.promptTokenCount     ?? 0;
     const tOut = result.usageMetadata?.candidatesTokenCount ?? 0;
