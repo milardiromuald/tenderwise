@@ -22,11 +22,46 @@ documents contractuels, poignées de main en contexte B2B.
 Ambiance : sérieuse, institutionnelle, inspirant confiance.
 Toujours en format paysage 16:9. Absolument aucun texte, lettre ou chiffre visible.`;
 
+interface HistoryEntry { value: string; savedAt: string }
+
+function fmtHistoryDate(iso: string): string {
+  try { return new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+  catch { return iso; }
+}
+
+/** Liste repliable des versions précédentes d'un prompt, avec restauration en un clic. */
+function PromptHistory({ history, onRestore }: { history: HistoryEntry[]; onRestore: (value: string) => void }) {
+  if (history.length === 0) return null;
+  return (
+    <details style={{ marginTop: 10 }}>
+      <summary style={{ fontSize: '0.78rem', color: '#6b7280', cursor: 'pointer', fontWeight: 600 }}>
+        Historique ({history.length} version{history.length > 1 ? 's' : ''} précédente{history.length > 1 ? 's' : ''})
+      </summary>
+      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {history.map((h, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 7, padding: '7px 11px' }}>
+            <span style={{ fontSize: '0.76rem', color: '#6b7280' }}>{fmtHistoryDate(h.savedAt)}</span>
+            <button
+              type="button"
+              onClick={() => onRestore(h.value)}
+              style={{ background: 'none', border: 'none', color: '#004a99', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', padding: 0 }}
+            >
+              Restaurer
+            </button>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 export default function PromptsPage() {
   const [articlePrompt, setArticlePrompt] = useState('');
   const [imagePrompt,   setImagePrompt]   = useState('');
   const [defaultArticlePrompt, setDefaultArticlePrompt] = useState('');
   const [defaultImagePrompt, setDefaultImagePrompt] = useState('');
+  const [articleHistory, setArticleHistory] = useState<HistoryEntry[]>([]);
+  const [imageHistory,   setImageHistory]   = useState<HistoryEntry[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState<'article' | 'image' | 'both' | null>(null);
   const [saved,    setSaved]    = useState<'article' | 'image' | 'both' | null>(null);
@@ -44,6 +79,8 @@ export default function PromptsPage() {
         setImagePrompt(r.imagePrompt ?? '');
         setDefaultArticlePrompt(r.defaultArticlePrompt ?? '');
         setDefaultImagePrompt(r.defaultImagePrompt ?? '');
+        setArticleHistory(r.articleHistory ?? []);
+        setImageHistory(r.imageHistory ?? []);
         setKeyTier(cfg.keyTier ?? 'unknown');
       })
       .catch(() => { /* ignore */ })
@@ -66,6 +103,10 @@ export default function PromptsPage() {
       });
       setSaved(target);
       setTimeout(() => setSaved(null), 3000);
+      // Rafraîchit l'historique (la version précédente vient d'y être archivée côté serveur).
+      const r = await fetch('/api/prompts').then(res => res.json());
+      setArticleHistory(r.articleHistory ?? []);
+      setImageHistory(r.imageHistory ?? []);
     } catch { /* ignore */ }
     finally { setSaving(null); }
   };
@@ -198,6 +239,7 @@ export default function PromptsPage() {
           <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 13px', marginTop: 10, fontSize: '0.78rem', color: '#92400e', lineHeight: 1.5 }}>
             <strong>Source unique :</strong> ce prompt est la seule instruction éditoriale envoyée à l&apos;IA — aucune autre directive n&apos;est ajoutée ailleurs. Le sujet et les paramètres de « Générer avec l&apos;IA » ne font que le compléter ; seul le format de sortie JSON est ajouté techniquement.
           </div>
+          <PromptHistory history={articleHistory} onRestore={setArticlePrompt} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, flexWrap: 'wrap', gap: 8 }}>
             <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>
               {articlePrompt.length} caractères · enregistré en base de données
@@ -293,6 +335,7 @@ export default function PromptsPage() {
           <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 13px', marginTop: 10, fontSize: '0.78rem', color: '#92400e', lineHeight: 1.5 }}>
             <strong>Source unique :</strong> ce prompt est la seule instruction qui pilote le style et le contenu des images — aucune autre directive n&apos;est ajoutée ailleurs. Seul le cadrage paysage 16:9 est appliqué techniquement. Si vous ne voulez aucun texte dans l&apos;image, précisez-le ici.
           </div>
+          <PromptHistory history={imageHistory} onRestore={setImagePrompt} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, flexWrap: 'wrap', gap: 8 }}>
             <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>
               {imagePrompt.length} caractères · enregistré en base de données
