@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import PreviewTopBar from '@/app/admin/PreviewTopBar';
 import RichEditor, { sanitizeHtml } from '@/components/RichEditor';
+import type { ReviewQuality } from '@/lib/reviewQuality';
 
 // Konva nécessite le DOM → chargé uniquement côté client (pas de SSR).
 const ImageComposer = dynamic(() => import('@/components/ImageComposer'), { ssr: false, loading: () => <div style={{ padding: '1rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem' }}>Chargement de l&apos;éditeur d&apos;image…</div> });
@@ -28,6 +29,11 @@ interface ReviewData {
   image_subtitle: string | null;
 }
 
+function parseScore(detail: string): number | null {
+  const m = detail.match(/Score (\d+)\/100/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
 const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
   en_attente: { label: 'En attente de validation', color: '#92400e', bg: '#fef3c7' },
   valide:     { label: 'Validé — à programmer', color: '#065f46', bg: '#d1fae5' },
@@ -38,7 +44,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }>
   modifie:    { label: 'Modifié', color: '#1e40af', bg: '#dbeafe' },
 };
 
-export default function ReviewClient({ token, review, admin = false, showNotifications = false, backgrounds = [], initialAction }: { token: string; review: ReviewData; admin?: boolean; showNotifications?: boolean; backgrounds?: { url: string; label?: string }[]; initialAction?: 'approve' | 'reject' }) {
+export default function ReviewClient({ token, review, admin = false, showNotifications = false, backgrounds = [], initialAction, quality = null }: { token: string; review: ReviewData; admin?: boolean; showNotifications?: boolean; backgrounds?: { url: string; label?: string }[]; initialAction?: 'approve' | 'reject'; quality?: ReviewQuality | null }) {
   const [titre, setTitre] = useState(review.titre || '');
   const [extrait, setExtrait] = useState(review.extrait || '');
   const [contenu, setContenu] = useState(review.contenu || '');
@@ -239,6 +245,24 @@ export default function ReviewClient({ token, review, admin = false, showNotific
           🧪 Article de <strong>test</strong> — aucun token Gemini utilisé.
         </div>
       )}
+
+      {quality && (() => {
+        const score = parseScore(quality.reviewDetail);
+        const color = score === null ? '#6b7280' : score >= 80 ? '#059669' : score >= 60 ? '#d97706' : '#dc2626';
+        const bg    = score === null ? '#f9fafb' : score >= 80 ? '#f0fdf4' : score >= 60 ? '#fffbeb' : '#fef2f2';
+        const border = score === null ? '#e5e7eb' : score >= 80 ? '#a7f3d0' : score >= 60 ? '#fde68a' : '#fecaca';
+        return (
+          <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: '12px 16px', marginBottom: 18, fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+              <strong style={{ color, fontSize: 14 }}>Évaluation IA</strong>
+              <span style={{ color: '#374151' }}>{quality.reviewDetail}</span>
+            </div>
+            {quality.linksDetail && (
+              <div style={{ color: '#6b7280', marginTop: 4 }}>🔗 {quality.linksDetail}</div>
+            )}
+          </div>
+        );
+      })()}
 
       <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 14, padding: 24, boxShadow: '0 1px 4px rgba(0,0,0,.05)' }}>
         {(imageUrl || previewLoading) && (

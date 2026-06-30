@@ -1,5 +1,6 @@
 ﻿import { queryOne } from '@/lib/db';
 import { getActiveBackgrounds } from '@/lib/backgrounds';
+import { extractQuality } from '@/lib/reviewQuality';
 import ReviewClient from './ReviewClient';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,7 @@ interface ReviewData {
   canonical_url: string | null;
   image_title: string | null;
   image_subtitle: string | null;
+  steps_log: string | null;
 }
 
 export default async function ReviewPage({
@@ -39,7 +41,7 @@ export default async function ReviewPage({
   let review: ReviewData | null = null;
   try {
     review = await queryOne<ReviewData>(
-      `SELECT r.id, r.article_id, r.status, r.subject, r.drive_link, r.image_url, r.is_test,
+      `SELECT r.id, r.article_id, r.status, r.subject, r.drive_link, r.image_url, r.is_test, r.steps_log,
               a.titre, a.extrait, a.contenu, a.statut,
               a.meta_title, a.meta_description, a.meta_keywords, a.canonical_url,
               a.image_title, a.image_subtitle
@@ -62,5 +64,6 @@ export default async function ReviewPage({
   }
 
   const backgrounds = await getActiveBackgrounds();
-  return <ReviewClient token={token} review={review} backgrounds={backgrounds} initialAction={initialAction} />;
+  const quality = extractQuality(review.steps_log);
+  return <ReviewClient token={token} review={review} backgrounds={backgrounds} initialAction={initialAction} quality={quality} />;
 }

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { queryOne } from '@/lib/db';
 import { getActiveBackgrounds } from '@/lib/backgrounds';
+import { extractQuality } from '@/lib/reviewQuality';
 import ReviewClient from '@/app/review/[token]/ReviewClient';
 
 export const dynamic = 'force-dynamic';
@@ -24,6 +25,7 @@ interface ReviewData {
   canonical_url: string | null;
   image_title: string | null;
   image_subtitle: string | null;
+  steps_log: string | null;
 }
 
 export default async function AdminReviewPage({ params }: { params: Promise<{ token: string }> }) {
@@ -35,7 +37,7 @@ export default async function AdminReviewPage({ params }: { params: Promise<{ to
   let review: ReviewData | null = null;
   try {
     review = await queryOne<ReviewData>(
-      `SELECT r.id, r.article_id, r.status, r.subject, r.drive_link, r.image_url, r.is_test,
+      `SELECT r.id, r.article_id, r.status, r.subject, r.drive_link, r.image_url, r.is_test, r.steps_log,
               a.titre, a.extrait, a.contenu, a.statut,
               a.meta_title, a.meta_description, a.meta_keywords, a.canonical_url,
               a.image_title, a.image_subtitle
@@ -61,5 +63,6 @@ export default async function AdminReviewPage({ params }: { params: Promise<{ to
   }
 
   const backgrounds = await getActiveBackgrounds();
-  return <ReviewClient token={token} review={review} admin showNotifications={session.user.role === 'admin'} backgrounds={backgrounds} />;
+  const quality = extractQuality(review.steps_log);
+  return <ReviewClient token={token} review={review} admin showNotifications={session.user.role === 'admin'} backgrounds={backgrounds} quality={quality} />;
 }
