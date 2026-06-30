@@ -1,4 +1,4 @@
-import mysql from 'mysql2/promise';
+import mysql, { type PoolConnection } from 'mysql2/promise';
 
 if (!process.env.DB_PASSWORD) {
   console.error('[db] AVERTISSEMENT : DB_PASSWORD non défini — connexion sans mot de passe. Définissez la variable d\'environnement en production.');
@@ -44,6 +44,29 @@ export async function execute(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [result] = await pool.execute(sql, params as any[]);
   return result as { insertId: number; affectedRows: number };
+}
+
+/**
+ * Exécute plusieurs requêtes dans une même transaction SQL : soit toutes
+ * appliquées, soit aucune (rollback automatique en cas d'erreur). `fn` reçoit
+ * une connexion dédiée — utiliser `conn.execute(...)` (API mysql2 standard),
+ * pas les helpers `query`/`execute` de ce module qui passent par le pool.
+ */
+export async function withTransaction<T>(
+  fn: (conn: PoolConnection) => Promise<T>
+): Promise<T> {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const result = await fn(conn);
+    await conn.commit();
+    return result;
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
 }
 
 export default pool;

@@ -1,4 +1,4 @@
-import { query, execute } from './db';
+import { query, withTransaction } from './db';
 import { createNotification } from './notifications';
 import { shareArticleOnLinkedIn } from './linkedinShare';
 import { emitWorkflowUpdate } from './workflowEvents';
@@ -37,17 +37,33 @@ export async function publishDue(): Promise<number> {
 
   let published = 0;
   for (const d of due) {
-    // Claim atomique : garantit une seule publication même si plusieurs appels
-    // concurrents ont sélectionné la même ligne ci-dessus.
-    const claim = await execute(
-      `UPDATE article_reviews SET status = 'publie', published_at = NOW()
-        WHERE id = ? AND status = 'programme'`,
-      [d.id],
-    );
-    if (claim.affectedRows !== 1) continue; // déjà publié par un autre appel
+    // Claim + mise à jour de l'article dans UNE transaction : soit les deux
+    // lignes passent à "publié" ensemble, soit aucune (rollback). Avant, un
+    // échec de la 2ᵉ requête laissait la review "publié" mais l'article
+    // toujours "programmé" — état incohérent impossible à rattraper seul.
+    let claimed = false;
+    try {
+      claimed = await withTransaction(async (conn) => {
+        const [claimResult] = await conn.execute(
+          `UPDATE article_reviews SET status = 'publie', published_at = NOW()
+            WHERE id = ? AND status = 'programme'`,
+          [d.id],
+        );
+        const affectedRows = (claimResult as { affectedRows: number }).affectedRows;
+        if (affectedRows !== 1) return false; // déjà publié par un autre appel concurrent
+
+        if (d.article_id) {
+          await conn.execute('UPDATE articles SET statut = ? WHERE id = ?', ['publie', d.article_id]);
+        }
+        return true;
+      });
+    } catch (e) {
+      console.error('[workflowPublish] échec transaction de publication, review', d.id, e);
+      continue; // rollback effectué — review restée "programme", retry au prochain passage
+    }
+    if (!claimed) continue;
 
     published++;
-    if (d.article_id) await execute('UPDATE articles SET statut = ? WHERE id = ?', ['publie', d.article_id]);
     await createNotification({
       type: 'success',
       title: `Article publié automatiquement : ${d.titre ?? ''}`,
