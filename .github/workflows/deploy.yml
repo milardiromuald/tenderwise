@@ -1,0 +1,56 @@
+name: Deploy to o2switch (FTP)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          # Variables nécessaires au build (next build exécute generateMetadata,
+          # sitemap.ts, etc. qui lisent ces réglages). Renseigner ces secrets
+          # dans Settings → Secrets and variables → Actions si le build échoue
+          # sans eux. Sinon, ce bloc env peut être supprimé.
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          SETTINGS_ENCRYPTION_KEY: ${{ secrets.SETTINGS_ENCRYPTION_KEY }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          # Racine de l'app Node configurée dans cPanel → Setup Node.js App.
+          server-dir: ./tenderwise2/
+          local-dir: ./
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/node_modules/**
+            **/.next/cache/**
+            **/public/uploads/**
+            **/*.env*
+            **/.env.local
