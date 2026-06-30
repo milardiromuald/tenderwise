@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { queryOne, execute } from '@/lib/db';
+import { str, requireField, requireEmail } from '@/lib/validate';
 
 function parseId(raw: string): number | null {
   const n = parseInt(raw, 10);
@@ -31,16 +32,23 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const merged = { ...existing, ...body };
 
+  const titre = str(merged.titre, 255);
+  const email = str(merged.email, 255);
+  const errors: string[] = [];
+  requireField(titre, "Le titre de l'offre", errors, 2);
+  if (email) requireEmail(email, "L'email de contact", errors);
+  if (errors.length > 0) return NextResponse.json({ error: errors.join(' ') }, { status: 422 });
+
   await execute(`
     UPDATE job_offers SET
       titre=?, contrat=?, lieu=?, email=?, sujet_email=?, description=?, competences=?, avantages=?,
       statut=?, nouveau=?, urgence=?, teletravail=?, date_publication=?, date_expiration=?
     WHERE id=?
   `, [
-    merged.titre || '', merged.contrat || '', merged.lieu || '',
-    merged.email || '', merged.sujet_email || '', merged.description || '',
-    merged.competences || '', merged.avantages || '',
-    merged.statut || 'active',
+    titre, str(merged.contrat, 50), str(merged.lieu, 255),
+    email, str(merged.sujet_email, 255), str(merged.description, 20000),
+    str(merged.competences, 5000), str(merged.avantages, 5000),
+    str(merged.statut, 30) || 'active',
     merged.nouveau ? 1 : 0, merged.urgence ? 1 : 0, merged.teletravail ? 1 : 0,
     merged.date_publication || null, merged.date_expiration || null,
     id,

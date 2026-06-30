@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { queryOne, execute } from '@/lib/db';
+import { str, requireField } from '@/lib/validate';
 
 function parseId(raw: string): number | null {
   const n = parseInt(raw, 10);
@@ -31,6 +32,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const merged = { ...existing, ...body };
 
+  const nom = str(merged.nom, 255);
+  const errors: string[] = [];
+  requireField(nom, 'Le nom du projet', errors, 2);
+  if (errors.length > 0) return NextResponse.json({ error: errors.join(' ') }, { status: 422 });
+
   await execute(`
     UPDATE projects SET
       nom=?, sous_titre=?, start_year=?, end_year=?, annees=?,
@@ -38,13 +44,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       type_etablissement=?, description=?, missions=?, images=?, statut=?, slug=?
     WHERE id=?
   `, [
-    merged.nom || '', merged.sous_titre || '',
+    nom, str(merged.sous_titre, 255),
     merged.start_year || null, merged.end_year || null,
-    merged.annees || '',
-    merged.budget_raw || null, merged.budget_fmt || '',
-    merged.client || '', merged.categorie || '', merged.type_etablissement || '',
-    merged.description || '', merged.missions || '', merged.images || '[]',
-    merged.statut || 'active', merged.slug || null,
+    str(merged.annees, 100),
+    merged.budget_raw || null, str(merged.budget_fmt, 100),
+    str(merged.client, 255), str(merged.categorie, 100), str(merged.type_etablissement, 100),
+    str(merged.description, 20000), str(merged.missions, 20000), str(merged.images, 20000) || '[]',
+    str(merged.statut, 30) || 'active', str(merged.slug, 80) || null,
     id,
   ]);
 
