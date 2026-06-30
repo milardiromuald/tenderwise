@@ -208,6 +208,33 @@ export async function fetchOrganizationName(token: string, urn: string): Promise
   return `Page ${id}`;
 }
 
+/**
+ * Avertissements pour les jetons LinkedIn proches de l'expiration (≤ 7 jours)
+ * ou déjà expirés. Aucun refresh token n'est fourni par LinkedIn par défaut :
+ * sans cette alerte proactive, l'expiration passe inaperçue jusqu'à un échec
+ * de publication. Utilisé par le cron quotidien des idées (déjà planifié).
+ */
+export async function getLinkedInExpiryWarnings(): Promise<string[]> {
+  const WARN_DAYS = 7;
+  const [pToken, pExpiresAt, oToken, oExpiresAt] = await Promise.all([
+    getSetting(KEYS.person.token, ''),
+    getSetting(KEYS.person.expiresAt, ''),
+    getSetting(KEYS.organization.token, ''),
+    getSetting(KEYS.organization.expiresAt, ''),
+  ]);
+  const daysLeft = (iso: string) => (new Date(iso).getTime() - Date.now()) / 86_400_000;
+  const warnings: string[] = [];
+  if (pToken && pExpiresAt && daysLeft(pExpiresAt) <= WARN_DAYS) {
+    const days = Math.ceil(daysLeft(pExpiresAt));
+    warnings.push(days <= 0 ? 'compte personnel LinkedIn — jeton expiré' : `compte personnel LinkedIn — expire dans ${days} j`);
+  }
+  if (oToken && oExpiresAt && daysLeft(oExpiresAt) <= WARN_DAYS) {
+    const days = Math.ceil(daysLeft(oExpiresAt));
+    warnings.push(days <= 0 ? 'Page entreprise LinkedIn — jeton expiré' : `Page entreprise LinkedIn — expire dans ${days} j`);
+  }
+  return warnings;
+}
+
 export async function getLinkedInStatus(req: NextRequest): Promise<LinkedInStatus> {
   // Les secrets sont lus via readSecret (déchiffrement) : un secret stocké mais
   // indéchiffrable (clé changée / valeur corrompue) apparaît comme « non

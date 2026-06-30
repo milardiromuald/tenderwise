@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { publishDue } from '@/lib/workflowPublish';
+import { sendGoogleChatMessage } from '@/lib/google';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -48,9 +49,10 @@ export async function GET(req: NextRequest) {
     const published = await publishDue();
     return NextResponse.json({ ok: true, published });
   } catch (e) {
-    return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : 'Erreur' },
-      { status: 500 },
-    );
+    const message = e instanceof Error ? e.message : 'Erreur';
+    // Alerte best-effort : ce cron tourne sans supervision humaine, une erreur
+    // silencieuse retarderait une publication programmée sans que personne le sache.
+    sendGoogleChatMessage(`❌ Échec de la publication programmée (cron) : ${message}`).catch(() => {});
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

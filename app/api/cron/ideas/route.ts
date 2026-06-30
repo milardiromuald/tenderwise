@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { query, execute } from '@/lib/db';
 import { generateArticleIdeas } from '@/lib/agents/ideaAgent';
+import { sendGoogleChatMessage } from '@/lib/google';
+import { getLinkedInExpiryWarnings } from '@/lib/linkedin';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -42,6 +44,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
+  // Vérification proactive (best-effort) : jeton(s) LinkedIn proche de l'expiration.
+  // Ce cron quotidien sert de planification naturelle — pas besoin d'une tâche dédiée.
+  getLinkedInExpiryWarnings()
+    .then((warnings) => {
+      if (warnings.length === 0) return;
+      return sendGoogleChatMessage(`⚠️ ${warnings.join(' / ')} — reconnectez dans Admin → Connecteurs → LinkedIn.`);
+    })
+    .catch(() => {});
+
   const force = req.nextUrl.searchParams.get('force') === '1';
 
   // Idempotence : ne pas regénérer si des idées "proposée" existent déjà ce jour
@@ -79,9 +90,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ ok: true, generated: ideas.length, ideas });
   } catch (e) {
-    return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : 'Erreur de génération' },
-      { status: 500 },
-    );
+    const message = e instanceof Error ? e.message : 'Erreur de génération';
+    // Alerte best-effort : ce cron tourne sans supervision humaine.
+    sendGoogleChatMessage(`❌ Échec de la génération quotidienne d'idées d'articles (cron) : ${message}`).catch(() => {});
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
