@@ -126,7 +126,11 @@
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Inconnuz\\\\Documents\\\\tenderwise V1\" -Force | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Directory\"}else{\"File\"}}} | Format-Table -AutoSize)",
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git config *)",
+      "Bash(git -c 'user.name=Romuald Milardi' -c user.email=r.milardi@tenderwise.fr commit -q -m ' *)",
+      "PowerShell(Test-NetConnection -ComputerName 127.0.0.1 -Port 3306 -WarningAction SilentlyContinue)",
+      "Bash(npm test *)"
     ]
   }
 }
