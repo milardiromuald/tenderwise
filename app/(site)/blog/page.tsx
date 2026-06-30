@@ -47,12 +47,16 @@ function formatDateShort(dateStr: string): string {
 const FALLBACK =
   'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80';
 
+const PAGE_SIZE = 12;
+
 export default async function BlogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ cat?: string }>;
+  searchParams: Promise<{ cat?: string; q?: string; page?: string }>;
 }) {
-  const { cat } = await searchParams;
+  const { cat, q, page: pageRaw } = await searchParams;
+  const search = (q || '').trim();
+  const requestedPage = Math.max(1, parseInt(pageRaw || '1', 10) || 1);
 
   let allArticles: Article[];
   try {
@@ -86,13 +90,37 @@ export default async function BlogPage({
   const categories = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
 
   // Filter by category
-  const articles = cat
+  let articles = cat
     ? allArticles.filter((a) => splitCats(a.categorie).includes(cat))
     : allArticles;
 
-  // Featured = most recent when no filter, else first in filtered
-  const featured = articles[0] ?? null;
-  const rest = articles.slice(1);
+  // Filter by search query (titre / extrait, insensible à la casse)
+  if (search) {
+    const needle = search.toLowerCase();
+    articles = articles.filter((a) =>
+      a.titre.toLowerCase().includes(needle) || (a.extrait || '').toLowerCase().includes(needle)
+    );
+  }
+
+  // La mise en avant "à la une" ne s'affiche qu'en page 1 et hors recherche
+  // (perd son sens dans une liste de résultats de recherche).
+  const showFeatured = requestedPage === 1 && !search;
+  const featured = showFeatured ? (articles[0] ?? null) : null;
+  const gridSource = showFeatured ? articles.slice(1) : articles;
+
+  const totalPages = Math.max(1, Math.ceil(gridSource.length / PAGE_SIZE));
+  const page = Math.min(requestedPage, totalPages);
+  const rest = gridSource.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Construit une URL /blog en conservant les filtres actifs (catégorie, recherche).
+  function pageHref(p: number, c = cat, s = search): string {
+    const params = new URLSearchParams();
+    if (c) params.set('cat', c);
+    if (s) params.set('q', s);
+    if (p > 1) params.set('page', String(p));
+    const qs = params.toString();
+    return `/blog${qs ? `?${qs}` : ''}`;
+  }
 
   // Sidebar recent: 5 most recent by date (independent of pin order)
   const recentSidebar = [...allArticles]
@@ -163,13 +191,47 @@ export default async function BlogPage({
           </div>
         </div>
 
+        {/* ── Recherche ──────────────────────────────────────────────── */}
+        <div style={{ background: 'white', borderBottom: '1px solid var(--site-border)' }}>
+          <div className="container" style={{ padding: '0.85rem 0' }}>
+            <form method="GET" action="/blog" style={{ display: 'flex', gap: '8px', maxWidth: '420px' }}>
+              {cat && <input type="hidden" name="cat" value={cat} />}
+              <input
+                type="search"
+                name="q"
+                defaultValue={search}
+                placeholder="Rechercher un article…"
+                style={{
+                  flex: 1, padding: '9px 14px', borderRadius: '8px',
+                  border: '1px solid var(--site-border)', fontSize: '0.88rem', outline: 'none',
+                }}
+              />
+              <button type="submit" style={{
+                padding: '9px 18px', borderRadius: '8px', border: 'none',
+                background: 'var(--site-blue)', color: 'white', fontWeight: 700,
+                fontSize: '0.85rem', cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>
+                Rechercher
+              </button>
+              {search && (
+                <Link href={pageHref(1, cat, '')} style={{
+                  display: 'flex', alignItems: 'center', padding: '0 14px',
+                  fontSize: '0.85rem', color: 'var(--site-text)', textDecoration: 'none',
+                }}>
+                  Effacer
+                </Link>
+              )}
+            </form>
+          </div>
+        </div>
+
         {/* ── Category filter bar ─────────────────────────────────────── */}
         {categories.length > 0 && (
           <div style={{ background: 'white', borderBottom: '1px solid var(--site-border)', position: 'sticky', top: 'var(--header-height)', zIndex: 100 }}>
             <div className="container">
               <div style={{ display: 'flex', gap: '8px', padding: '0.85rem 0', overflowX: 'auto', scrollbarWidth: 'none', flexWrap: 'nowrap', alignItems: 'center' }}>
                 <Link
-                  href="/blog"
+                  href={pageHref(1, '', search)}
                   className={`cat-pill${!cat ? ' active' : ''}`}
                   style={{
                     padding: '6px 16px', borderRadius: '20px', fontSize: '0.82rem', fontWeight: 700,
@@ -185,7 +247,7 @@ export default async function BlogPage({
                 {categories.map(([name, count]) => (
                   <Link
                     key={name}
-                    href={`/blog?cat=${encodeURIComponent(name)}`}
+                    href={pageHref(1, name, search)}
                     className={`cat-pill${cat === name ? ' active' : ''}`}
                     style={{
                       padding: '6px 16px', borderRadius: '20px', fontSize: '0.82rem', fontWeight: 600,
@@ -210,7 +272,7 @@ export default async function BlogPage({
             <div style={{ textAlign: 'center', padding: '5rem 2rem', background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--site-border)' }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
               <p style={{ color: 'var(--site-text)', fontSize: '1.1rem' }}>
-                Aucun article dans cette catégorie.{' '}
+                {search ? <>Aucun article ne correspond à « {search} ».</> : 'Aucun article dans cette catégorie.'}{' '}
                 <Link href="/blog" style={{ color: 'var(--site-blue)', fontWeight: 600 }}>Voir tout →</Link>
               </p>
             </div>
@@ -416,6 +478,37 @@ export default async function BlogPage({
                     <Link href="/blog" style={{ color: 'var(--site-blue)', fontWeight: 600 }}>Voir tout →</Link>
                   </p>
                 )}
+
+                {/* ── Pagination ────────────────────────────────────── */}
+                {totalPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '2.5rem', flexWrap: 'wrap' }}>
+                    {page > 1 && (
+                      <Link href={pageHref(page - 1)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--site-border)', color: 'var(--site-blue-dark)', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none' }}>
+                        ← Précédent
+                      </Link>
+                    )}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <Link
+                        key={p}
+                        href={pageHref(p)}
+                        style={{
+                          padding: '8px 14px', borderRadius: '8px', textDecoration: 'none',
+                          fontWeight: 700, fontSize: '0.85rem', minWidth: '38px', textAlign: 'center',
+                          background: p === page ? 'var(--site-blue)' : 'white',
+                          color: p === page ? 'white' : 'var(--site-text)',
+                          border: `1px solid ${p === page ? 'var(--site-blue)' : 'var(--site-border)'}`,
+                        }}
+                      >
+                        {p}
+                      </Link>
+                    ))}
+                    {page < totalPages && (
+                      <Link href={pageHref(page + 1)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--site-border)', color: 'var(--site-blue-dark)', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none' }}>
+                        Suivant →
+                      </Link>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* ── SIDEBAR ─────────────────────────────────────────── */}
@@ -430,7 +523,7 @@ export default async function BlogPage({
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <Link
-                        href="/blog"
+                        href={pageHref(1, '', search)}
                         style={{
                           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                           padding: '8px 12px', borderRadius: '8px',
@@ -449,7 +542,7 @@ export default async function BlogPage({
                       {categories.map(([name, count]) => (
                         <Link
                           key={name}
-                          href={`/blog?cat=${encodeURIComponent(name)}`}
+                          href={pageHref(1, name, search)}
                           className="sb-recent"
                           style={{
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
