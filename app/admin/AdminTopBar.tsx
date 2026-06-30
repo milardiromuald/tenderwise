@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import NotificationBell from './NotificationBell';
+import GlobalSearch from './GlobalSearch';
 
 interface AdminTopBarProps {
   /** Ouverture de la sidebar mobile (hamburger) — état détenu par AdminShell. */
@@ -144,6 +145,7 @@ function TopBarInner({ onOpenSidebar, role }: AdminTopBarProps) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+          <GlobalSearch />
           {role === 'admin' && <NotificationBell inline />}
         </div>
       </div>
