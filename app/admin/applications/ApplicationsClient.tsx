@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useEffect, useState } from 'react';
+import { toCsv, downloadCsv } from '@/lib/csvExport';
 
 interface Application {
   id: number;
@@ -65,6 +66,20 @@ export default function ApplicationsClient() {
     load();
   };
 
+  const exportCsv = () => {
+    if (!rows || rows.length === 0) return;
+    const csv = toCsv(rows, [
+      { key: 'created_at', label: 'Date' },
+      { key: 'prenom', label: 'Prénom' },
+      { key: 'nom', label: 'Nom' },
+      { key: 'job_title', label: 'Poste' },
+      { key: 'email', label: 'Email' },
+      { key: 'telephone', label: 'Téléphone' },
+      { key: 'statut', label: 'Statut' },
+    ]);
+    downloadCsv(`candidatures-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+  };
+
   return (
     <div style={{ padding: '2rem 2.5rem', minHeight: '100%' }}>
       <div style={{ marginBottom: '1.75rem' }}>
@@ -82,13 +97,20 @@ export default function ApplicationsClient() {
 
       {rows && rows.length >= 0 && !err && (
         <>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-            {['nouveau', 'lu', 'traite', 'archive'].map((s) => (
-              <div key={s} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '12px 18px', minWidth: '110px' }}>
-                <p style={{ fontSize: '1.4rem', fontWeight: 800, color: STATUTS[s].fg, margin: 0, fontFamily: 'Montserrat, sans-serif' }}>{counts[s] || 0}</p>
-                <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: '2px 0 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{STATUTS[s].label}</p>
-              </div>
-            ))}
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '1.5rem', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              {['nouveau', 'lu', 'traite', 'archive'].map((s) => (
+                <div key={s} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '12px 18px', minWidth: '110px' }}>
+                  <p style={{ fontSize: '1.4rem', fontWeight: 800, color: STATUTS[s].fg, margin: 0, fontFamily: 'Montserrat, sans-serif' }}>{counts[s] || 0}</p>
+                  <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: '2px 0 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{STATUTS[s].label}</p>
+                </div>
+              ))}
+            </div>
+            <button onClick={exportCsv} disabled={rows.length === 0}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '8px 16px', borderRadius: '8px', fontWeight: 700, fontSize: '0.83rem', cursor: rows.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', border: '1px solid #e5e7eb', background: 'white', color: rows.length === 0 ? '#cbd5e1' : '#374151' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exporter CSV
+            </button>
           </div>
 
           {rows.length === 0 ? (
@@ -162,6 +184,7 @@ export default function ApplicationsClient() {
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
               <a href={`/api/applications/${selected.id}?doc=cv`} style={{ padding: '10px 18px', background: '#004a99', color: 'white', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none' }}>⬇ CV {fmtSize(selected.cv_size)}</a>
               {selected.lm_filename && <a href={`/api/applications/${selected.id}?doc=lm`} style={{ padding: '10px 18px', background: 'white', color: '#004a99', border: '1px solid #004a99', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none' }}>⬇ Lettre {fmtSize(selected.lm_size)}</a>}
+              <a href={`mailto:${selected.email}?subject=${encodeURIComponent(`RE: ${selected.job_title || 'Votre candidature'}`)}`} style={{ padding: '10px 18px', background: 'white', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none' }}>✉ Répondre par email</a>
             </div>
 
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '18px' }}>

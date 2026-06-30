@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useState } from 'react';
+import { toCsv, downloadCsv } from '@/lib/csvExport';
 
 type Statut = 'nouveau' | 'lu' | 'archive';
 
@@ -174,6 +175,20 @@ export default function ContactMessagesClient({ initialMessages, counts }: Props
     setSelected(null);
   };
 
+  const handleExport = () => {
+    const csv = toCsv(filtered, [
+      { key: 'nom', label: 'Nom' },
+      { key: 'email', label: 'Email' },
+      { key: 'telephone', label: 'Téléphone' },
+      { key: 'societe', label: 'Société' },
+      { key: 'objet', label: 'Objet' },
+      { key: 'message_preview', label: 'Message' },
+      { key: 'statut', label: 'Statut' },
+      { key: 'created_at', label: 'Reçu le' },
+    ]);
+    downloadCsv(`messages-contact-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+  };
+
   return (
     <div style={{ padding: '2rem', maxWidth: '1100px' }}>
       {/* Header */}
@@ -202,18 +217,25 @@ export default function ContactMessagesClient({ initialMessages, counts }: Props
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        {[
-          { key: 'all', label: `Tous (${total})` },
-          { key: 'nouveau', label: `Nouveaux (${nouveau})` },
-          { key: 'lu', label: `Lus (${lu})` },
-          { key: 'archive', label: `Archivés (${archive})` },
-        ].map(f => (
-          <button key={f.key} onClick={() => setFilter(f.key)}
-            style={{ padding: '8px 18px', borderRadius: '8px', fontWeight: 700, fontSize: '0.83rem', cursor: 'pointer', fontFamily: 'inherit', border: 'none', transition: 'all 0.15s', background: filter === f.key ? '#004a99' : 'white', color: filter === f.key ? 'white' : '#475569', boxShadow: filter === f.key ? '0 4px 12px rgba(0,74,153,0.2)' : '0 1px 3px rgba(0,0,0,0.06)', outline: filter !== f.key ? '1px solid #e5e7eb' : 'none' }}>
-            {f.label}
-          </button>
-        ))}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {[
+            { key: 'all', label: `Tous (${total})` },
+            { key: 'nouveau', label: `Nouveaux (${nouveau})` },
+            { key: 'lu', label: `Lus (${lu})` },
+            { key: 'archive', label: `Archivés (${archive})` },
+          ].map(f => (
+            <button key={f.key} onClick={() => setFilter(f.key)}
+              style={{ padding: '8px 18px', borderRadius: '8px', fontWeight: 700, fontSize: '0.83rem', cursor: 'pointer', fontFamily: 'inherit', border: 'none', transition: 'all 0.15s', background: filter === f.key ? '#004a99' : 'white', color: filter === f.key ? 'white' : '#475569', boxShadow: filter === f.key ? '0 4px 12px rgba(0,74,153,0.2)' : '0 1px 3px rgba(0,0,0,0.06)', outline: filter !== f.key ? '1px solid #e5e7eb' : 'none' }}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <button onClick={handleExport} disabled={filtered.length === 0}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '8px 16px', borderRadius: '8px', fontWeight: 700, fontSize: '0.83rem', cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', border: '1px solid #e5e7eb', background: 'white', color: filtered.length === 0 ? '#cbd5e1' : '#374151' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exporter CSV
+        </button>
       </div>
 
       {/* Table */}
